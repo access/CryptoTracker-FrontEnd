@@ -13,8 +13,10 @@ const conf = {
   cursorY: 0,
   //------------------
   ActiveTickerID: 0,
-  ActiveTickerCryptoName: '',
-  ActiveTickerBaseCrypto: ''
+  ActiveTickerCryptoCurrencyName: '',
+  ActiveTickerBaseCrypto: '',
+  //------------------
+  UserChartsType: 'bar'
 }
 
 document.onmousemove = function (event) {
@@ -23,7 +25,7 @@ document.onmousemove = function (event) {
 };
 
 // "global" variables
-let cryptoCharts = {};
+let cryptoCharts = { destroy: () => { } };
 let ctx = {};
 let chartValuesArray = [];
 let chartLabelsArray = [];
@@ -137,10 +139,8 @@ function App() {
   // receive all crypto items from server, set state values
   function updateTickers() {
     // if ticker is selected 
-    console.log('conf.ActiveTickerID', conf.ActiveTickerID);
-    console.log('conf.ActiveTickerCryptoName', conf.ActiveTickerCryptoName);
     if (conf.ActiveTickerID !== 0) {
-      setActiveChart(conf.ActiveTickerID, conf.ActiveTickerCryptoName, conf.ActiveTickerBaseCrypto);
+      setActiveChart(conf.ActiveTickerID, conf.ActiveTickerCryptoCurrencyName, conf.ActiveTickerBaseCrypto);
     } else {
       postData(conf.SERVER_BASE_URL + '/api/CryptoItems', "")
         .then((data) => {
@@ -258,9 +258,8 @@ function App() {
         if (currentCryptoProcessed < cryptoItemsCount) {
           processCryptoItem(cryptoItems[currentCryptoProcessed]);
         } else {
-          if (cryptoCharts.length === 0)
-            cryptoCharts.destroy();
-          cryptoCharts = getChart(ctx, 'bar');
+          cryptoCharts.destroy();
+          cryptoCharts = getChart(ctx, conf.UserChartsType);
           cryptoCharts.update();
         }
       });
@@ -284,10 +283,8 @@ function App() {
   }
 
   function setActiveChart(cryptoID, cryptoName, baseCrypto) {
-    console.log(cryptoID, ' : ', cryptoName, ' : ', baseCrypto);
     conf.ActiveTickerID = cryptoID;
-    conf.ActiveTIckerCryptoName = cryptoName;
-    console.log(cryptoID, ' : ', conf.ActiveTIckerCryptoName, ' : ', baseCrypto);
+    conf.ActiveTickerCryptoCurrencyName = cryptoName;
     conf.ActiveTickerBaseCrypto = baseCrypto;
     const rndColor = function () { return `rgba(${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, 0.1)` }
     chartLabelsArray = [];
@@ -309,15 +306,22 @@ function App() {
     }).then(e => {
       //if (cryptoCharts.length === 0)
       cryptoCharts.destroy();
-      cryptoCharts = getChart(ctx, 'bar');
+      cryptoCharts = getChart(ctx, conf.UserChartsType);
       cryptoCharts.update();
     });
     forceUpdate();
   }
 
+  function setChartType(e) {
+    conf.UserChartsType = e.target.value;
+    updateTickers();
+  }
+
   return (
     <div className="App">
-      <Nav />
+      <Nav
+        setChartType={setChartType}
+      />
       <div id="notifyContainer"></div>
       <div className="container">
         <div className="card m-3 p-1 container-fluid">
@@ -332,6 +336,8 @@ function App() {
                   <label htmlFor="input_AddCryptocurrency" className="h5 block text-sm font-medium text-gray-700 my-2">New Ticker</label>
                   <Input callback={addCrypto} />
                   <button type="button" className="btn btn-lg btn-outline-dark mt-3" onClick={() => addCrypto}>Add Cryptocurrency</button>
+
+
 
                   {/* PROGRESS TICK TIMER */}
                   <hr className="w-full border-t border-gray-600 mt-4 mb-2" />
@@ -379,7 +385,7 @@ function App() {
                       </div>
                       <div className="col-auto">
                         <div className="input-group">
-                          <span className="input-group-text text-primary" id="basic-addon1">HH:mm</span>
+                          <span className="input-group-text text-dark" id="basic-addon1">HH:mm</span>
                           <input className="form-control" onChange={setChartPeriod} type="time" id="chartPeriod" aria-describedby="basic-addon1" name="chartPeriod" />
                         </div>
                       </div>
