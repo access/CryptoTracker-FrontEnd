@@ -198,7 +198,7 @@ function App() {
   function setChartPeriod(e) {
     const inputValue = e.target.value;
     chartPeriodSeconds = parseInt(inputValue.split(':')[0]) * 60 * 60 + parseInt(inputValue.split(':')[1]) * 60;
-    historicalPeriodChange();
+    updateTickers();
   }
 
   function historicalPeriodChange() {
