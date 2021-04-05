@@ -1,5 +1,3 @@
-//import React from 'react';
-//import { Config } from '../App';
 import * as bootstrap from 'bootstrap'
 
 function Notify(message, notifyType = "dark") {

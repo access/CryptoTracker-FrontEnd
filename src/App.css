@@ -1,3 +1,4 @@
+
 .ticker {
   border-radius: 4px;
   background: #fff;
@@ -10,7 +11,13 @@
 
 .ticker:hover {
   transform: scale(1.025);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 1 4px 8px rgba(0, 0, 0, 0.06);
+}
+
+.ticker-selected {
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), 0 5px 8px rgba(0, 0, 0, 0.1);
 }
 
 .App {
