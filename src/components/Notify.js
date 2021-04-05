@@ -6,7 +6,7 @@ function Notify(message, notifyType = "dark") {
       ${message}
     </div>`;
 
-    let container = document.getElementById('notifyContainer');
+  let container = document.getElementById('notifyContainer');
   container.innerHTML = innerCode;
   const el = document.getElementById('notify');
   const alert = new bootstrap.Alert(el);

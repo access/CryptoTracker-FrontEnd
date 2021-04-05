@@ -16,7 +16,7 @@
 
 .ticker-selected {
   border-radius: 4px;
-  background: #fff;
+  background: rgb(241, 241, 241);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), 0 5px 8px rgba(0, 0, 0, 0.1);
 }
 

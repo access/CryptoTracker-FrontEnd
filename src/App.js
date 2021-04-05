@@ -5,15 +5,16 @@ import Chart from 'chart.js'
 import Ticker from './components/Ticker';
 import Notify from './components/Notify';
 
-
-
 const conf = {
   // using ASP .NET Core 5 WEB API application running on local machine on port 44338
   // API address is SERVER_BASE_URL + '/api/[Controller]'
   SERVER_BASE_URL: "https://localhost:44338",
-  selectedTickerID: 0,
   cursorX: 0,
-  cursorY: 0
+  cursorY: 0,
+  //------------------
+  ActiveTickerID: 0,
+  ActiveTickerCryptoName: '',
+  ActiveTickerBaseCrypto: ''
 }
 
 document.onmousemove = function (event) {
@@ -28,6 +29,8 @@ let chartValuesArray = [];
 let chartLabelsArray = [];
 let cryptoItems = [];
 let chartPeriodSeconds = 21600;
+let chartBackgroundColors = [];
+let chartBorderColors = [];
 
 // for listening ENTER keydown event - clear input, call tickers adding function
 const Input = function (e) {
@@ -49,6 +52,14 @@ function getChart(ctx, chartType = 'bar') {
     options: {
       responsive: true,
       normalized: false,
+      maintainAspectRatio: true,
+      // animation: {
+      //   duration: 0
+      // },
+      // hover: {
+      //   animationDuration: 0
+      // },
+      //responsiveAnimationDuration: 0,
       // legend: {
       //   display: false
       // },
@@ -68,7 +79,8 @@ function getChart(ctx, chartType = 'bar') {
         //   stacked: true
         // }
       },
-      animation: false
+      //animation: false,
+      //hover:false
     }
   });
 }
@@ -124,11 +136,18 @@ function App() {
 
   // receive all crypto items from server, set state values
   function updateTickers() {
-    postData(conf.SERVER_BASE_URL + '/api/CryptoItems', "")
-      .then((data) => {
-        cryptoItems = data;
-        historicalPeriodChange();
-      });
+    // if ticker is selected 
+    console.log('conf.ActiveTickerID', conf.ActiveTickerID);
+    console.log('conf.ActiveTickerCryptoName', conf.ActiveTickerCryptoName);
+    if (conf.ActiveTickerID !== 0) {
+      setActiveChart(conf.ActiveTickerID, conf.ActiveTickerCryptoName, conf.ActiveTickerBaseCrypto);
+    } else {
+      postData(conf.SERVER_BASE_URL + '/api/CryptoItems', "")
+        .then((data) => {
+          cryptoItems = data;
+          historicalPeriodChange();
+        });
+    }
   }
 
   function addCrypto() {
@@ -142,17 +161,17 @@ function App() {
   }
 
   async function postData(url = '', data = {}, reqMethod = "POST") {
-    const response = await fetch(url, { 
+    const response = await fetch(url, {
       method: reqMethod,
-      mode: 'cors', 
+      mode: 'cors',
       cache: 'no-cache',
       credentials: 'same-origin',
-      headers: {        'Content-Type': 'application/json'      },
-      redirect: 'follow', 
-      referrerPolicy: 'no-referrer', 
-      body: JSON.stringify(data) 
+      headers: { 'Content-Type': 'application/json' },
+      redirect: 'follow',
+      referrerPolicy: 'no-referrer',
+      body: JSON.stringify(data)
     }).catch(err => {
-      Notify('[GET TICKERS] API server connection error - ' + err, 'danger')
+      Notify(`[GET TICKERS] API server (${conf.SERVER_BASE_URL}) connection error - ${err}`, 'danger')
       return new Promise(res => JSON.parse('[]'))
     })
     return await response.json();
@@ -167,7 +186,7 @@ function App() {
       redirect: 'follow',
       referrerPolicy: 'no-referrer',
     }).catch(err => {
-      Notify('[SET PERIOD] API server connection error - ' + err, 'danger')
+      Notify(`[SET PERIOD] API server (${conf.SERVER_BASE_URL}) connection error - ${err}`, 'danger')
       return new Promise(res => JSON.parse('[]'))
     })
 
@@ -206,30 +225,45 @@ function App() {
     let cryptoItemsCount = cryptoItems.length;
     let currentCryptoProcessed = 0;
     chartLabelsArray = [];
+    chartValuesArray = [];
+    const rndColor = function () { return `rgba(${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, 0.1)` }
+    // let rndCryptoColor = rndColor();
+    // let rndCryptoBorderColor = rndColor();
+    if (chartBackgroundColors.length !== cryptoItemsCount && chartBorderColors.length !== cryptoItemsCount) {
+      chartBackgroundColors = [];
+      chartBorderColors = [];
+      cryptoItems.forEach(c => {
+        chartBackgroundColors.push(rndColor());
+        chartBorderColors.push(rndColor());
+      });
+    }
     // using recursion when getting data of cryptocurrency for sorted chart view of crypto items
     // crypto = {BaseCrypto: "BTC", ID: 49, CryptoName: "ADA", LastTradeRate: "0,00002045", TradeRateDate: "2021-04-04T21:06:57.033"}
     const processCryptoItem = function (crypto) {
-      const rndColor = function () { return `rgba(${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, 0.1)` }
-      chartLabelsArray.push(crypto.CryptoName);
-      let rndCryptoColor = rndColor();
-      let rndCryptoBorderColor = rndColor();
+      if (crypto === undefined) return;
+      cryptoItems.forEach(item => {
+        chartLabelsArray.push('BaseCrypto: ' + crypto.BaseCrypto);
+      });
 
       getChartsDataArray(crypto.ID, function (data) {
-        let datasetItem = { label: '', data: [], backgroundColor: rndCryptoColor, borderColor: rndCryptoBorderColor, borderWidth: 2 };
+        let datasetItem = { label: '', data: [], backgroundColor: chartBackgroundColors[currentCryptoProcessed], borderColor: chartBorderColors[currentCryptoProcessed], borderWidth: 2 };
         datasetItem.label = crypto.CryptoName;
         // collect charts data into one array
         data.forEach(cr => {
           datasetItem.data.push(cr.MarketValue);
         });
         chartValuesArray.push(datasetItem);
-        cryptoCharts = getChart(ctx, 'bar');
       }).then(e => {
         currentCryptoProcessed++;
         if (currentCryptoProcessed < cryptoItemsCount) {
           processCryptoItem(cryptoItems[currentCryptoProcessed]);
+        } else {
+          if (cryptoCharts.length === 0)
+            cryptoCharts.destroy();
+          cryptoCharts = getChart(ctx, 'bar');
+          cryptoCharts.update();
         }
       });
-
     };
     processCryptoItem(cryptoItems[currentCryptoProcessed]);
   }
@@ -240,13 +274,44 @@ function App() {
   async function getChartsDataArray(cryptoCurrencyItemID, callback) {
     return await getData(conf.SERVER_BASE_URL + '/api/CryptoValues/' + cryptoCurrencyItemID + '/' + chartPeriodSeconds)
       .then((data) => {
-        //console.log('/api/CryptoValues/', data); // JSON data parsed by `response.json()` call
         callback(data);
       });
   }
 
-  function setActiveChart(cryptoID) {
-    conf.selectedTickerID = cryptoID;
+  function appRerender() {
+    updateTickers();
+    forceUpdate();
+  }
+
+  function setActiveChart(cryptoID, cryptoName, baseCrypto) {
+    console.log(cryptoID, ' : ', cryptoName, ' : ', baseCrypto);
+    conf.ActiveTickerID = cryptoID;
+    conf.ActiveTIckerCryptoName = cryptoName;
+    console.log(cryptoID, ' : ', conf.ActiveTIckerCryptoName, ' : ', baseCrypto);
+    conf.ActiveTickerBaseCrypto = baseCrypto;
+    const rndColor = function () { return `rgba(${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, 0.1)` }
+    chartLabelsArray = [];
+    chartValuesArray = [];
+    //document.getElementById('cryptoCharts').innerHTML = '';
+
+    getChartsDataArray(cryptoID, function (data) {
+      data.forEach(cryptoValue => {
+        chartLabelsArray.push(cryptoName + ' - ' + baseCrypto);
+      });
+      //console.log('data: ', data);
+      let datasetItem = { label: '', data: [], backgroundColor: rndColor(), borderColor: 'rgba(0, 0, 0, 0.15)', borderWidth: 2 };
+      datasetItem.label = cryptoName;
+      // collect charts data into one array
+      data.forEach(cr => {
+        datasetItem.data.push(cr.MarketValue);
+      });
+      chartValuesArray.push(datasetItem);
+    }).then(e => {
+      //if (cryptoCharts.length === 0)
+      cryptoCharts.destroy();
+      cryptoCharts = getChart(ctx, 'bar');
+      cryptoCharts.update();
+    });
     forceUpdate();
   }
 
@@ -281,11 +346,18 @@ function App() {
                   <hr className="w-full border-t border-gray-600 mt-2" />
 
                   {/* TICKERS */}
-                  <label htmlFor="tickers" className="h5 block text-sm font-medium text-gray-700 mt-1">Tickers</label>
+                  <label htmlFor="tickers" className="h5 block text-sm font-medium text-gray-700 m-1">Tickers</label>
+                  <p className="text-success m-1 fw-bold">Select a ticker to view its graph</p>
                   <div className="row" id="tickers">
 
                     {cryptoItems.map((cryptoitem, idx) => {
-                      return <Ticker cryptoitem={cryptoitem} funcUpdate={updateTickers} selected={(cryptoitem.ID === conf.selectedTickerID)} setActiveChart={setActiveChart} key={cryptoitem.ID} />
+                      return <Ticker
+                        cryptoitem={cryptoitem}
+                        funcUpdate={updateTickers}
+                        selected={(cryptoitem.ID === conf.ActiveTickerID)}
+                        setActiveChart={setActiveChart}
+                        appRerender={appRerender}
+                        key={cryptoitem.ID} />
                     })}
 
                   </div>
