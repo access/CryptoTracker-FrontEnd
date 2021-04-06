@@ -34,7 +34,7 @@ let chartPeriodSeconds = 21600;
 let chartBackgroundColors = [];
 let chartBorderColors = [];
 
-// for listening ENTER keydown event - clear input, call tickers adding function
+// for listening ENTER keydown event - then clear input, call tickers adding function
 const Input = function (e) {
   const handleKeyDown = function (event) {
     if (event.key === 'Enter')
@@ -42,6 +42,8 @@ const Input = function (e) {
   }
   return <input type="text" className="form-control" placeholder="Ex. DOGE" id="input_AddCryptocurrency" onKeyDown={handleKeyDown} />
 }
+
+const rndColor = function (size=0.15) { return `rgba(${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, ${size})` }
 
 function getChart(ctx, chartType = 'bar') {
   // dataset object = {Id: 1699, CurrencyID: 45, MarketValue: 0.00347115, HistoryDate: "2021-04-04T10:46:12.77"}
@@ -55,16 +57,6 @@ function getChart(ctx, chartType = 'bar') {
       responsive: true,
       normalized: false,
       maintainAspectRatio: true,
-      // animation: {
-      //   duration: 0
-      // },
-      // hover: {
-      //   animationDuration: 0
-      // },
-      //responsiveAnimationDuration: 0,
-      // legend: {
-      //   display: false
-      // },
       scales: {
         yAxes: [{
           ticks: {
@@ -74,15 +66,7 @@ function getChart(ctx, chartType = 'bar') {
         xAxes: [{
           display: false //this will remove all the x-axis grid lines
         }],
-        // x: {
-        //   stacked: true,
-        // },
-        // y: {
-        //   stacked: true
-        // }
       },
-      //animation: false,
-      //hover:false
     }
   });
 }
@@ -172,7 +156,7 @@ function App() {
       body: JSON.stringify(data)
     }).catch(err => {
       Notify(`[GET TICKERS] API server (${conf.SERVER_BASE_URL}) connection error - ${err}`, 'danger')
-      return new Promise(res => JSON.parse('[]'))
+      return new Promise(res => JSON.parse('[]')) // return empty array on network error
     })
     return await response.json();
   }
@@ -189,7 +173,6 @@ function App() {
       Notify(`[SET PERIOD] API server (${conf.SERVER_BASE_URL}) connection error - ${err}`, 'danger')
       return new Promise(res => JSON.parse('[]'))
     })
-
     return await response.json();
   }
 
@@ -226,15 +209,13 @@ function App() {
     let currentCryptoProcessed = 0;
     chartLabelsArray = [];
     chartValuesArray = [];
-    const rndColor = function () { return `rgba(${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, 0.1)` }
-    // let rndCryptoColor = rndColor();
-    // let rndCryptoBorderColor = rndColor();
+    // if data array changed, then change color set
     if (chartBackgroundColors.length !== cryptoItemsCount && chartBorderColors.length !== cryptoItemsCount) {
       chartBackgroundColors = [];
       chartBorderColors = [];
       cryptoItems.forEach(c => {
         chartBackgroundColors.push(rndColor());
-        chartBorderColors.push(rndColor());
+        chartBorderColors.push('rgba(0, 0, 0, 0.1)');
       });
     }
     // using recursion when getting data of cryptocurrency for sorted chart view of crypto items
@@ -246,6 +227,7 @@ function App() {
       });
 
       getChartsDataArray(crypto.ID, function (data) {
+        // object model of charts datasets item
         let datasetItem = { label: '', data: [], backgroundColor: chartBackgroundColors[currentCryptoProcessed], borderColor: chartBorderColors[currentCryptoProcessed], borderWidth: 2 };
         datasetItem.label = crypto.CryptoName;
         // collect charts data into one array
@@ -286,17 +268,15 @@ function App() {
     conf.ActiveTickerID = cryptoID;
     conf.ActiveTickerCryptoCurrencyName = cryptoName;
     conf.ActiveTickerBaseCrypto = baseCrypto;
-    const rndColor = function () { return `rgba(${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, ${Math.floor(Math.random() * 255) + 1}, 0.1)` }
     chartLabelsArray = [];
     chartValuesArray = [];
-    //document.getElementById('cryptoCharts').innerHTML = '';
 
     getChartsDataArray(cryptoID, function (data) {
       data.forEach(cryptoValue => {
         chartLabelsArray.push(cryptoName + ' - ' + baseCrypto);
       });
-      //console.log('data: ', data);
-      let datasetItem = { label: '', data: [], backgroundColor: rndColor(), borderColor: 'rgba(0, 0, 0, 0.15)', borderWidth: 2 };
+      // object model of charts datasets item
+      let datasetItem = { label: '', data: [], backgroundColor: rndColor(), borderColor: 'rgba(0, 0, 0, 0.2)', borderWidth: 2 };
       datasetItem.label = cryptoName;
       // collect charts data into one array
       data.forEach(cr => {
@@ -304,7 +284,6 @@ function App() {
       });
       chartValuesArray.push(datasetItem);
     }).then(e => {
-      //if (cryptoCharts.length === 0)
       cryptoCharts.destroy();
       cryptoCharts = getChart(ctx, conf.UserChartsType);
       cryptoCharts.update();
@@ -319,17 +298,15 @@ function App() {
 
   return (
     <div className="App">
-      <Nav
-        setChartType={setChartType}
-      />
+      <Nav setChartType={setChartType} />
       <div id="notifyContainer"></div>
       <div className="container">
         <div className="card m-3 p-1 container-fluid">
           <div className="row flex-nowrap m-1">
 
+            {/* left side */}
             <div className="col-4" >
 
-              {/* left side */}
               <div className="card h-100 border-0">
                 <div className="card-body">
                   {/* INPUT ADD CURRENCY */}

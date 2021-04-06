@@ -26,9 +26,7 @@ function Nav({ setChartType }) {
             </div>
           </div>
         </div>
-
       </div>
-
     </nav>
   );
 }
